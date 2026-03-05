@@ -1,0 +1,14 @@
+{
+  "name": "meus-links-afiliado",
+  "version": "1.0.0",
+  "description": "Gerenciador de links afiliado",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "Eli Tech Review",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

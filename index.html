@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eli Tech Review - Painel</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: white;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 30px;
+}
+
+h1 {
+    text-align: center;
+    color: #0ea5e9;
+}
+
+input, select {
+    padding: 10px;
+    margin: 5px 0;
+    width: 100%;
+    border-radius: 6px;
+    border: none;
+}
+
+button {
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+}
+
+.add-btn {
+    background: #0ea5e9;
+    color: white;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.card {
+    background: #1e293b;
+    padding: 15px;
+    margin-top: 15px;
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+.card:hover {
+    transform: scale(1.02);
+}
+
+.actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.visit {
+    background: #0ea5e9;
+    color: white;
+}
+
+.delete {
+    background: #ef4444;
+    color: white;
+}
+
+.badge {
+    background: #0ea5e9;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>Eli Tech Review - Painel</h1>
+
+    <input id="nome" placeholder="Nome do Produto">
+    <input id="categoria" placeholder="Categoria">
+    <input id="url" placeholder="Link de Afiliado">
+
+    <button class="add-btn" onclick="adicionar()">Adicionar Produto</button>
+
+    <hr>
+
+    <select id="filtro" onchange="carregar()">
+        <option value="">Todas Categorias</option>
+    </select>
+
+    <div id="lista"></div>
+</div>
+
+<script>
+async function carregar() {
+    const res = await fetch('/links');
+    let links = await res.json();
+
+    const lista = document.getElementById("lista");
+    const filtro = document.getElementById("filtro");
+
+    const filtroSelecionado = filtro.value;
+
+    lista.innerHTML = "";
+
+    // Ordenar do mais clicado para o menos clicado
+    links.sort((a, b) => b.cliques - a.cliques);
+
+    // Criar categorias únicas
+    let categorias = [...new Set(links.map(link => link.categoria))];
+
+    if (filtro.options.length <= 1) {
+        categorias.forEach(cat => {
+            const option = document.createElement("option");
+            option.value = cat;
+            option.textContent = cat;
+            filtro.appendChild(option);
+        });
+    }
+
+    links.forEach((link, index) => {
+        if (filtroSelecionado && link.categoria !== filtroSelecionado) return;
+
+        lista.innerHTML += `
+        <div class="card">
+            <strong>${link.nome}</strong>
+            <span class="badge">${link.categoria}</span>
+            <p>Cliques: ${link.cliques}</p>
+            <div class="actions">
+                <button class="visit" onclick="registrarClique(${index}, '${link.url}')">Visitar</button>
+                <button class="delete" onclick="remover(${index})">Excluir</button>
+            </div>
+        </div>
+        `;
+    });
+}
+
+async function adicionar() {
+    const nome = document.getElementById("nome").value;
+    const categoria = document.getElementById("categoria").value;
+    const url = document.getElementById("url").value;
+
+    if (!nome || !url) {
+        alert("Preencha nome e link!");
+        return;
+    }
+
+    await fetch('/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, categoria, url })
+    });
+
+    document.getElementById("nome").value = "";
+    document.getElementById("categoria").value = "";
+    document.getElementById("url").value = "";
+
+    carregar();
+}
+
+async function remover(index) {
+    await fetch('/links/' + index, { method: 'DELETE' });
+    carregar();
+}
+
+async function registrarClique(index, url) {
+    await fetch('/clique/' + index, { method: 'POST' });
+    window.open(url, '_blank');
+    carregar();
+}
+
+carregar();
+</script>
+
+</body>
+</html>
