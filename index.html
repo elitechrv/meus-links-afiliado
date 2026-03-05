@@ -96,7 +96,7 @@ button {
 
     <hr>
 
-    <select id="filtro" onchange="carregar()">
+    <select id="filtro" onchange="renderizar()">
         <option value="">Todas Categorias</option>
     </select>
 
@@ -104,13 +104,16 @@ button {
 </div>
 
 <script>
-async function carregar() {
-    const res = await fetch('/links');
-    let links = await res.json();
 
+let links = JSON.parse(localStorage.getItem("links")) || [];
+
+function salvar() {
+    localStorage.setItem("links", JSON.stringify(links));
+}
+
+function renderizar() {
     const lista = document.getElementById("lista");
     const filtro = document.getElementById("filtro");
-
     const filtroSelecionado = filtro.value;
 
     lista.innerHTML = "";
@@ -118,17 +121,15 @@ async function carregar() {
     // Ordenar do mais clicado para o menos clicado
     links.sort((a, b) => b.cliques - a.cliques);
 
-    // Criar categorias únicas
-    let categorias = [...new Set(links.map(link => link.categoria))];
-
-    if (filtro.options.length <= 1) {
-        categorias.forEach(cat => {
-            const option = document.createElement("option");
-            option.value = cat;
-            option.textContent = cat;
-            filtro.appendChild(option);
-        });
-    }
+    // Atualizar categorias
+    let categorias = [...new Set(links.map(link => link.categoria).filter(Boolean))];
+    filtro.innerHTML = `<option value="">Todas Categorias</option>`;
+    categorias.forEach(cat => {
+        const option = document.createElement("option");
+        option.value = cat;
+        option.textContent = cat;
+        filtro.appendChild(option);
+    });
 
     links.forEach((link, index) => {
         if (filtroSelecionado && link.categoria !== filtroSelecionado) return;
@@ -136,10 +137,10 @@ async function carregar() {
         lista.innerHTML += `
         <div class="card">
             <strong>${link.nome}</strong>
-            <span class="badge">${link.categoria}</span>
-            <p>Cliques: ${link.cliques}</p>
+            ${link.categoria ? `<span class="badge">${link.categoria}</span>` : ""}
+            <p>Cliques: ${link.cliques || 0}</p>
             <div class="actions">
-                <button class="visit" onclick="registrarClique(${index}, '${link.url}')">Visitar</button>
+                <button class="visit" onclick="clicar(${index})">Visitar</button>
                 <button class="delete" onclick="remover(${index})">Excluir</button>
             </div>
         </div>
@@ -147,7 +148,7 @@ async function carregar() {
     });
 }
 
-async function adicionar() {
+function adicionar() {
     const nome = document.getElementById("nome").value;
     const categoria = document.getElementById("categoria").value;
     const url = document.getElementById("url").value;
@@ -157,31 +158,36 @@ async function adicionar() {
         return;
     }
 
-    await fetch('/links', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, categoria, url })
+    links.push({
+        nome,
+        categoria,
+        url,
+        cliques: 0
     });
+
+    salvar();
+    renderizar();
 
     document.getElementById("nome").value = "";
     document.getElementById("categoria").value = "";
     document.getElementById("url").value = "";
-
-    carregar();
 }
 
-async function remover(index) {
-    await fetch('/links/' + index, { method: 'DELETE' });
-    carregar();
+function remover(index) {
+    links.splice(index, 1);
+    salvar();
+    renderizar();
 }
 
-async function registrarClique(index, url) {
-    await fetch('/clique/' + index, { method: 'POST' });
-    window.open(url, '_blank');
-    carregar();
+function clicar(index) {
+    links[index].cliques++;
+    salvar();
+    window.open(links[index].url, "_blank");
+    renderizar();
 }
 
-carregar();
+renderizar();
+
 </script>
 
 </body>
